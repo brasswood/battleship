@@ -47,7 +47,7 @@ data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Carrier derivi
 data Boat = Boat { coords :: [(Int,Int)], name :: BoatName }
 
 boat :: (Int,Int) -> length -> Orientation -> BoatName -> Boat
-boat origin length orientation name = Boat (boatRec origin length orientation) name
+boat origin length orientation = Boat (boatRec origin length orientation)
   where boatRec _ 0 _ = []
         boatRec (x,y) length Hor = ((x,y):boatRec (x,y+1) (length-1) Hor)
         boatRec (x,y) length Vert = ((x,y):boatRec (x+1,y) (length-1) Vert)
