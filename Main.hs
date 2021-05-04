@@ -44,23 +44,19 @@ getCol coord
 
 data Orientation = Hor | Vert deriving (Show)
 data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Carrier deriving (Show)
-data Boat = Boat { origin :: (Int,Int), 
-                   boatLength :: Int, 
-                   orientation :: Orientation,
-                   name :: BoatName } deriving (Show)
+data Boat = Boat { coords :: [(Int,Int)], name :: BoatName }
 
-patrolBoat origin orientation = Boat origin 2 orientation PatrolBoat
-submarine origin orientation = Boat origin 3 orientation Submarine
-destroyer origin orientation = Boat origin 3 orientation Destroyer
-battleship origin orientation = Boat origin 4 orientation Battleship
-carrier origin orientation = Boat origin 5 orientation Carrier
+boat :: (Int,Int) -> length -> Orientation -> BoatName -> Boat
+boat origin length orientation name = Boat (boatRec origin length orientation) name
+  where boatRec _ 0 _ = []
+        boatRec (x,y) length Hor = ((x,y):boatRec (x,y+1) (length-1) Hor)
+        boatRec (x,y) length Vert = ((x,y):boatRec (x+1,y) (length-1) Vert)
 
-asList :: Boat -> [(Int,Int)]
-asList (Boat origin boatLength orientation _) =
-  asListRec origin boatLength orientation
-    where asListRec _ 0 _ = []
-          asListRec (x,y) boatLength Hor = ((x,y):(boatRec (x,y+1) (boatLength - 1) Hor))
-          asListRec (x,y) boatLength Vert = ((x,y):(boatRec(x+1,y) (boatLength - 1) Vert))
+patrolBoat origin orientation = boat origin 2 orientation PatrolBoat
+submarine origin orientation = boat origin 3 orientation Submarine
+destroyer origin orientation = boat origin 3 orientation Destroyer
+battleship origin orientation = boat origin 4 orientation Battleship
+carrier origin orientation = boat origin 5 orientation Carrier
 
 validPlacement :: Boat -> [Boat] -> Bool
 validPlacement boat boats = all (\coord@(x,y) -> (x >= 0) && (x <= 9) && (y >= 0) && (y <= 9) && coord `notElem` coords) (asList boat)
