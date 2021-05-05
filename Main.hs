@@ -28,7 +28,7 @@ instance Show Board where
   show (Board (row:rows)) = showRow row ++ "\n" ++ show (Board rows)
     where showRow (HitSquare:squares)   = "X" ++ showRow squares
           showRow (MissSquare:squares)  = "O" ++ showRow squares
-          showRow (BlankSquare:squares) = " " ++ showRow squares
+          showRow (BlankSquare:squares) = "W" ++ showRow squares
           showRow []              = ""
   show (Board [])         = ""
 
