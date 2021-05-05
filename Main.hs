@@ -60,11 +60,11 @@ battleship origin orientation = boat origin 4 orientation Battleship
 carrier origin orientation = boat origin 5 orientation Carrier
 
 validPlacement :: Boat -> [Boat] -> Bool
-validPlacement (Boat coords _) = all (validSquare coords)
-  where validSquare :: (Int,Int) -> [Boat] -> Bool
-        validSquare (x,y) boats
+validPlacement boat boats = all validSquare (coords boat)
+  where validSquare :: (Int,Int) -> Bool
+        validSquare (x,y)
           | (x<0)||(x>9)||(y<0)||(y>9) = False
-          | otherwise = (x,y) `notElem` (concat . (map coords)) boats
+          | otherwise = (x,y) `notElem` (concat (map coords boats))
   
 placeBoat :: ((Int,Int) -> Orientation -> Boat) -> [Boat] -> IO [Boat]
 placeBoat boatConstructor boats = do
