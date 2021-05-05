@@ -94,10 +94,27 @@ data Player = Player { hits :: [(Int,Int)],
                        misses :: [(Int,Int)],
                        ships :: [Boat] }
 
-data Outcome = Hit | Miss | Sunk BoatType | Win
+data Outcome = Hit | Miss | Sunk BoatName | Win BoatName
 
 attack :: Player -> (Int,Int) -> Player -> (Outcome, Player)
-attack p1@(Player hits misses _) coord (Player _ _ boats) =
+attack (Player hits misses _) shot (Player _ _ boats) =
   let 
-      attackBoat :: Player -> (Int,Int) -> Boat -> (Outcome, Player)
-      attackBoat p1@(Player hits _ _) coord boat
+      attackBoat :: Boat -> Outcome
+      attackBoat (Boat coords name)
+        | shot `notElem` coords = Miss
+        | shot `elem` hits = Hit
+        | (shot `elem` coords) && (coords `isSubsequenceOf` (shot:hits)) = 
+            Sunk name
+        | otherwise = Hit
+      foldOutcome :: Boat -> Outcome -> Outcome
+      foldOutcome boat Miss = attackBoat boat
+      foldOutcome _ nonMiss = nonMiss
+      foldedOutcome = foldr foldOutcome Miss boats
+      totalPlayer Miss = Player hits (shot:misses) boats
+      totalPlayer _    = Player (shot:hits) misses boats
+    in case foldedOutcome of
+      Sunk name -> if concat (map coords boats) `isSubsequenceOf` 
+                        (shot:hits) then (Win name, totalPlayer (Win name))
+                   else (Sunk name, totalPlayer (Sunk name))
+      nonSunk   -> (nonSunk, totalPlayer nonSunk)
+
