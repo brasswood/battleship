@@ -7,9 +7,9 @@ main :: IO ()
 main = return ()
 
 blankBoard :: Board
-blankBoard = Board ((replicate 10 . replicate 10) Blank)
+blankBoard = Board ((replicate 10 . replicate 10) BlankSquare)
 
-data Square = HitSquare | MissSquare | BlankSquare
+data Square = HitSquare | MissSquare | BlankSquare deriving (Show, Eq)
 
 newtype Board = Board [[Square]]
 
