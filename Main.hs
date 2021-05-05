@@ -25,10 +25,14 @@ data Square = HitSquare | MissSquare | BlankSquare deriving (Show, Eq)
 newtype Board = Board [[Square]]
 
 instance Show Board where
-  show (Board (row:rows)) = showRow row ++ "\n" ++ show (Board rows)
-    where showRow (HitSquare:squares)   = "X" ++ showRow squares
-          showRow (MissSquare:squares)  = "O" ++ showRow squares
-          showRow (BlankSquare:squares) = "W" ++ showRow squares
+  show (Board (row:rows)) = 
+          "   1 2 3 4 5 6 7 8 9 10\n\n" ++ showRows (row:rows) 0
+    where showRows (row:rows) x = [chr (x+65)] ++ "  " ++
+            showRow row ++ "\n\n" ++ showRows rows (x+1)
+          showRows [] _= ""
+          showRow (HitSquare:squares)   = "X " ++ showRow squares
+          showRow (MissSquare:squares)  = "O " ++ showRow squares
+          showRow (BlankSquare:squares) = "W " ++ showRow squares
           showRow []              = ""
   show (Board [])         = ""
 
