@@ -27,6 +27,11 @@ squareAt coord (Board arr) = case (getRow coord, getCol coord) of
                          (Just row, Just col) -> Just (arr !! row !! col)
                          _                    -> Nothing
 
+asTuple :: String -> Maybe (Int,Int)
+asTuple str = case (getRow str, getCol str) of
+                (Just row, Just col) -> Just (row, col)
+                _                    -> Nothing
+
 getRow :: String -> Maybe Int
 getRow coord
   | length coord /= 2 && length coord /= 3 = Nothing
@@ -121,3 +126,31 @@ attack (Player hits misses boats) shot (Player _ _ opponentBoats) =
                    else (Sunk name, totalPlayer (Sunk name))
       nonSunk   -> (nonSunk, totalPlayer nonSunk)
 
+game :: IO ()
+game = do
+  boats2 <- placeAllBoats
+  putStrLn "Psst... Here's player 2's board"
+  putStrLn (show boats2)
+  let player1 = Player [] [] []
+      player2 = Player [] [] boats2
+      gameLoop :: Player ->  Player -> IO ()
+      gameLoop player1 player2 = do
+        putStr "Guess: "
+        p1guess <- getLine
+        case asTuple p1guess of
+          Nothing -> do putStrLn "Invalid guess."
+                        gameLoop player1 player2
+          Just shot -> let (outcome, newPlayer1) =
+                              attack player1 shot player2 in
+                         case outcome of
+                           Miss -> do putStrLn "Miss."
+                                      gameLoop newPlayer1 player2
+                           Hit  -> do putStrLn "Hit!"
+                                      gameLoop newPlayer1 player2
+                           Sunk boatName -> do putStrLn ("You sunk my " ++ 
+                                                 show boatName ++ "!")
+                                               gameLoop newPlayer1 player2
+                           Win boatName -> putStrLn ("You sunk my " ++
+                                             show boatName ++ "!"
+                                             ++ " You win!")
+     in gameLoop player1 player2
