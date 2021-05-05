@@ -98,23 +98,25 @@ data Player = Player { hits :: [(Int,Int)],
 data Outcome = Hit | Miss | Sunk BoatName | Win BoatName deriving (Show, Eq)
 
 attack :: Player -> (Int,Int) -> Player -> (Outcome, Player)
-attack (Player hits misses _) shot (Player _ _ boats) =
+attack (Player hits misses boats) shot (Player _ _ opponentBoats) =
   let 
+      subset :: (Foldable t, Eq a) => t a -> t a -> Bool
+      subset lst1 lst2 = all ((flip elem) lst2) lst1
       attackBoat :: Boat -> Outcome
       attackBoat (Boat coords name)
         | shot `notElem` coords = Miss
         | shot `elem` hits = Hit
-        | (shot `elem` coords) && (coords `isSubsequenceOf` (shot:hits)) = 
+        | (shot `elem` coords) && (coords `subset` (shot:hits)) = 
             Sunk name
         | otherwise = Hit
       foldOutcome :: Boat -> Outcome -> Outcome
       foldOutcome boat Miss = attackBoat boat
       foldOutcome _ nonMiss = nonMiss
-      foldedOutcome = foldr foldOutcome Miss boats
+      foldedOutcome = foldr foldOutcome Miss opponentBoats
       totalPlayer Miss = Player hits (shot:misses) boats
       totalPlayer _    = Player (shot:hits) misses boats
     in case foldedOutcome of
-      Sunk name -> if concat (map coords boats) `isSubsequenceOf` 
+      Sunk name -> if concat (map coords opponentBoats) `subset` 
                         (shot:hits) then (Win name, totalPlayer (Win name))
                    else (Sunk name, totalPlayer (Sunk name))
       nonSunk   -> (nonSunk, totalPlayer nonSunk)
