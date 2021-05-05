@@ -42,9 +42,9 @@ getCol coord
                             else Nothing
                   _      -> Nothing
 
-data Orientation = Hor | Vert deriving (Show)
-data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Carrier deriving (Show)
-data Boat = Boat { coords :: [(Int,Int)], name :: BoatName }
+data Orientation = Hor | Vert deriving (Show, Eq)
+data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Carrier deriving (Show, Eq)
+data Boat = Boat { coords :: [(Int,Int)], name :: BoatName } deriving (Show, Eq)
 
 boat :: (Int,Int) -> length -> Orientation -> BoatName -> Boat
 boat origin length orientation = Boat (boatRec origin length orientation)
@@ -92,9 +92,9 @@ placeAllBoats = placeAllBoatsRec [patrolBoat, destroyer, submarine, battleship, 
 
 data Player = Player { hits :: [(Int,Int)],
                        misses :: [(Int,Int)],
-                       ships :: [Boat] }
+                       ships :: [Boat] } deriving (Show, Eq)
 
-data Outcome = Hit | Miss | Sunk BoatName | Win BoatName
+data Outcome = Hit | Miss | Sunk BoatName | Win BoatName deriving (Show, Eq)
 
 attack :: Player -> (Int,Int) -> Player -> (Outcome, Player)
 attack (Player hits misses _) shot (Player _ _ boats) =
