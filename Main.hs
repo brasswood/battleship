@@ -10,12 +10,15 @@ main = return ()
 blankBoard :: Board
 blankBoard = Board ((replicate 10 . replicate 10) BlankSquare)
 
-addShot :: (Int,Int) -> Outcome -> Board -> Board
-addShot (x,y) outcome (Board board) = Board ((take x board) ++ [row] ++ (drop (x+1) board))
+addShot :: (Int,Int) -> Square -> Board -> Board
+addShot (x,y) square (Board board) = Board ((take x board) ++ [row] ++ (drop (x+1) board))
   where row = (take y (board !! x)) ++ [square] ++ (drop (y+1) (board !! x))
-        square
-          | outcome == Miss = MissSquare
-          | otherwise = HitSquare
+
+generateBoard :: [(Int,Int)] -> [(Int,Int)] -> Board
+generateBoard [] [] = blankBoard
+generateBoard (hit:hits) [] = addShot hit HitSquare (generateBoard hits [])
+generateBoard hits (miss:misses) = addShot miss MissSquare (generateBoard hits misses)
+
 
 data Square = HitSquare | MissSquare | BlankSquare deriving (Show, Eq)
 
@@ -167,7 +170,9 @@ game = do
   let player1 = Player [] [] boats1 Human
       player2 = Player [] [] boats2 Computer
       gameLoop :: Player ->  Player -> IO ()
-      gameLoop player1@(Player _ _ _ Human) player2 = do
+      gameLoop player1@(Player p1hits p1misses _ Human) player2 = do
+        putStrLn ("Your board:")
+        putStrLn (show (generateBoard p1hits p1misses))
         putStr "Guess: "
         p1guess <- getLine
         case asTuple p1guess of
