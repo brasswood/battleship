@@ -165,7 +165,7 @@ attack (Player hits misses boats ptype) shot (Player _ _ opponentBoats _) =
 game :: IO ()
 game = do
   hShip <- isHaskellShip
-    -- putStrLn "Psst... Here's player 2's board"
+  -- putStrLn "Psst... Here's player 2's board"
   -- putStrLn (showBoats boats2)
   let gameLoop :: Player ->  Player -> IO ()
       gameLoop player1@(Player p1hits p1misses p1boats Human) player2@(Player p2hits p2misses _p2boats _p2type)= do
@@ -242,6 +242,9 @@ game = do
                recBoats <- placeBoat boatType boats
                placeAllBoatsRec remainingBoatTypes recBoats
      in do
+          putStrLn (case hShip of
+                      True -> "Welcome to Haskellship! Let's set up your board."
+                      False -> "Welcome to Battleship! Let's set up your board.")
           boats1 <- ask
           boats2 <- placeAllBoats [patrolBoat, destroyer, submarine, battleship, carrier] 
           let
