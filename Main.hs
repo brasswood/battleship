@@ -3,24 +3,26 @@ module Main where
 import Text.Read
 import System.Random
 import Data.Char
+import Data.List
 
 main :: IO ()
-main = return ()
+main = game
 
 blankBoard :: Board
 blankBoard = Board ((replicate 10 . replicate 10) BlankSquare)
 
-addShot :: (Int,Int) -> Square -> Board -> Board
-addShot (x,y) square (Board board) = Board ((take x board) ++ [row] ++ (drop (x+1) board))
+addSquare :: (Int,Int) -> Square -> Board -> Board
+addSquare (x,y) square (Board board) = Board ((take x board) ++ [row] ++ (drop (x+1) board))
   where row = (take y (board !! x)) ++ [square] ++ (drop (y+1) (board !! x))
 
-generateBoard :: [(Int,Int)] -> [(Int,Int)] -> Board
-generateBoard [] [] = blankBoard
-generateBoard (hit:hits) [] = addShot hit HitSquare (generateBoard hits [])
-generateBoard hits (miss:misses) = addShot miss MissSquare (generateBoard hits misses)
+generateBoard :: [(Int,Int)] -> [(Int,Int)] -> [Boat] -> Board
+generateBoard [] [] [] = blankBoard
+generateBoard [] [] ((Boat [] _t):boats) = generateBoard [] [] boats
+generateBoard [] [] ((Boat (coord:coords) _t):boats) = addSquare coord BoatSquare (generateBoard [] [] ((Boat coords _t):boats))
+generateBoard [] (miss:misses) boats = addSquare miss MissSquare (generateBoard [] misses boats)
+generateBoard (hit:hits) misses boats = addSquare hit HitSquare (generateBoard hits misses boats)
 
-
-data Square = HitSquare | MissSquare | BlankSquare deriving (Show, Eq)
+data Square = HitSquare | MissSquare | BlankSquare | BoatSquare deriving (Show, Eq)
 
 newtype Board = Board [[Square]]
 
@@ -33,6 +35,7 @@ instance Show Board where
           showRow (HitSquare:squares)   = "X " ++ showRow squares
           showRow (MissSquare:squares)  = "O " ++ showRow squares
           showRow (BlankSquare:squares) = "W " ++ showRow squares
+          showRow (BoatSquare:squares)  = "B " ++ showRow squares
           showRow []              = ""
   show (Board [])         = ""
 
@@ -167,16 +170,19 @@ attack (Player hits misses boats ptype) shot (Player _ _ opponentBoats _) =
 
 game :: IO ()
 game = do
-  boats1 <- placeAllBoats
+  putStrLn "Welcome to Battleship! Let's set up your board."
+  boats1 <- ask
   boats2 <- placeAllBoats
-  putStrLn "Psst... Here's player 2's board"
-  putStrLn (showBoats boats2)
+  -- putStrLn "Psst... Here's player 2's board"
+  -- putStrLn (showBoats boats2)
   let player1 = Player [] [] boats1 Human
       player2 = Player [] [] boats2 Computer
       gameLoop :: Player ->  Player -> IO ()
-      gameLoop player1@(Player p1hits p1misses _ Human) player2 = do
+      gameLoop player1@(Player p1hits p1misses p1boats Human) player2@(Player p2hits p2misses _p2boats _p2type)= do
+        putStrLn ("Your opponent's board:")
+        putStrLn (show (generateBoard p1hits p1misses []))
         putStrLn ("Your board:")
-        putStrLn (show (generateBoard p1hits p1misses))
+        putStrLn (show (generateBoard p2hits p2misses p1boats))
         putStr "Guess: "
         p1guess <- getLine
         case asTuple p1guess of
@@ -210,3 +216,54 @@ game = do
             Win boatName -> putStrLn ("I sunk your " ++ (show boatName) ++
                                         "! I win!")
      in gameLoop player1 player2
+  where ask = do 
+                putStr "Do you want me to randomly place your boats for you? (y/N) "
+                a <- getLine
+                if (a == "y") || (a == "Y") then placeAllBoats
+                else if (a == "n") || (a == "N") || (a == "") then userPlaceBoats
+                else (putStr "Sorry, I didn't get that. ") >> ask
+
+userPlaceBoats :: IO [Boat]
+userPlaceBoats = userPlaceBoatsRec [PatrolBoat, Submarine, Destroyer, Battleship, Carrier] []
+  where userPlaceBoatsRec :: [BoatName] -> [Boat] -> IO [Boat]
+        userPlaceBoatsRec [] boats = return boats
+        userPlaceBoatsRec boatTypes boats = do
+          putStrLn ("Your Board:\n" ++ show (generateBoard [] [] boats))
+          putStr (concat ["Which boat would you like to place? (",
+           (intercalate ", " (numberBoats boatTypes)),
+           ") "])
+          n <- getLine
+          case (readMaybe n) :: Maybe Int of
+            Nothing -> yell
+            Just choice -> if ((choice < 0) || (choice > length boatTypes)) then yell
+                           else do placedBoat <- pickCoords (boatTypes !! (choice-1)) boats
+                                   userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
+          where yell = putStrLn "Not an option." >> userPlaceBoatsRec boatTypes boats
+                numberBoats boatTypes = map (\(n,b) -> concat [show n, ". ", show b]) (zip [1..] boatTypes)
+
+pickCoords :: BoatName -> [Boat] -> IO [Boat]
+pickCoords boatType boats = 
+  let constructor = case boatType of PatrolBoat -> patrolBoat
+                                     Submarine -> submarine
+                                     Destroyer -> destroyer
+                                     Battleship -> battleship
+                                     Carrier -> carrier
+      yellCoord = (putStrLn "That's not a properly formatted coordinate. Example: 'A10'") >> pickCoords boatType boats
+      yellPlacement = (putStrLn "Sorry, you can't put that boat there.") >> pickCoords boatType boats
+      pickOrientation :: (Int,Int) -> IO [Boat]
+      pickOrientation origin = do
+        putStr "Pick 'hor' or 'vert': "
+        s <- getLine
+        case s of
+          "hor" -> checkValidity (constructor origin Hor)
+          "vert" -> checkValidity (constructor origin Vert)
+          _ -> (putStrLn "Invalid input.") >> pickOrientation origin
+      checkValidity boat = case validPlacement boat boats of
+                             True -> return (boat:boats)
+                             False -> yellPlacement
+    in do
+      putStr "Pick a leftmost or uppermost coordinate: "
+      s <- getLine
+      case (asTuple s) of
+        Nothing -> yellCoord
+        Just origin -> pickOrientation origin
