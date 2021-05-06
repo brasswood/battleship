@@ -4,15 +4,15 @@ cabal-version:       >=1.10
 -- http://haskell.org/cabal/users-guide/
 
 name:                Battleship
-version:             0.1.0.0
--- synopsis:
--- description:
+version:             1.0.0.0
+synopsis:            A text-based Battleship game written in Haskell
+description:         Battleship written in Haskell for my EECS 368 final project at KU
 -- bug-reports:
 -- license:
 license-file:        LICENSE
 author:              Andrew Riachi
 maintainer:          brasswood@users.noreply.github.com
--- copyright:
+copyright:           Copyright (c) 2021 Andrew E Riachi
 -- category:
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
