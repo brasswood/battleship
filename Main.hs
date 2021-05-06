@@ -188,12 +188,14 @@ game = do
                                       gameLoop player2 newPlayer1
                            Hit  -> do putStrLn "Hit!"
                                       gameLoop player2 newPlayer1
-                           Sunk boatName -> do putStrLn ("You sunk my " ++ 
-                                                 show boatName ++ "!")
+                           Sunk boatName -> do putStrLn (concat ["You sunk my ", show boatName, "!"])
                                                gameLoop player2 newPlayer1
-                           Win boatName -> putStrLn ("You sunk my " ++
-                                             show boatName ++ "!"
-                                             ++ " You win!")
+                           Win boatName -> do putStrLn (concat ["You sunk my ", show boatName, "! You win!"])
+                                              if hShip then putStrLn (concat ["\nDr. Gill,\nThank you for teaching me Haskell and JavaScript. ",
+                                                                              "I really enjoyed taking your class.\n", 
+                                                                              "Here's to the start of a fantastic new journey!\n",
+                                                                              "-Andrew"])
+                                              else return ()
       gameLoop player1@(Player _ _ _ Computer) player2 = do
         shot <- randomCoord
         putStr ("I guess " ++ (fromTuple shot) ++ ". ")
