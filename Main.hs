@@ -203,12 +203,13 @@ game = do
             Sunk boatName -> do putStrLn ("I sunk your " ++ (show boatName)
                                             ++ "!")
                                 gameLoop player2 newPlayer1
-            Win boatName -> putStrLn ("I sunk your " ++ (show boatName) ++
-                                        "! I win!")
+            Win boatName -> putStrLn (concat ["I sunk your ", (show boatName),
+                                        "! I win!"])
+      bship_constructor = if hShip then haskellship else battleship
       ask = do 
               putStr "Do you want me to randomly place your boats for you? (y/N) "
               a <- getLine
-              if (a == "y") || (a == "Y") then placeAllBoats
+              if (a == "y") || (a == "Y") then placeAllBoats [patrolBoat, destroyer, submarine, bship_constructor, carrier] 
               else if (a == "n") || (a == "N") || (a == "") then userPlaceBoats
               else (putStr "Sorry, I didn't get that. ") >> ask
       bship = if hShip then Haskellship else Battleship
@@ -229,9 +230,8 @@ game = do
                                  userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
         where yell = putStrLn "Not an option." >> userPlaceBoatsRec boatTypes boats
       numberBoats boatTypes = map (\(n,b) -> concat [show n, ". ", show b]) (zip [1..] boatTypes)
-      bship_constructor = if hShip then haskellship else battleship
-      placeAllBoats :: IO [Boat]
-      placeAllBoats = placeAllBoatsRec [patrolBoat, destroyer, submarine, bship_constructor, carrier] []
+      placeAllBoats :: [((Int,Int) -> Orientation -> Boat)] -> IO [Boat]
+      placeAllBoats boatsToPlace = placeAllBoatsRec boatsToPlace []
       placeAllBoatsRec :: [((Int,Int) -> Orientation -> Boat)] -> [Boat] -> IO [Boat]
       placeAllBoatsRec [] boats = return boats
       placeAllBoatsRec boatTypes boats = do
@@ -243,7 +243,7 @@ game = do
                placeAllBoatsRec remainingBoatTypes recBoats
      in do
           boats1 <- ask
-          boats2 <- placeAllBoats
+          boats2 <- placeAllBoats [patrolBoat, destroyer, submarine, battleship, carrier] 
           let
             player1 = Player [] [] boats1 Human
             player2 = Player [] [] boats2 Computer
