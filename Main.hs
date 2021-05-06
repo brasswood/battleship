@@ -219,16 +219,18 @@ game = do
       userPlaceBoatsRec [] boats = return boats
       userPlaceBoatsRec boatTypes boats = do
         putStrLn ("Your Board:\n" ++ show (generateBoard [] [] boats))
-        putStr (concat ["Which boat would you like to place? (",
-         (intercalate ", " (numberBoats boatTypes)),
-         ") "])
-        n <- getLine
-        case (readMaybe n) :: Maybe Int of
-          Nothing -> yell
-          Just choice -> if ((choice < 0) || (choice > length boatTypes)) then yell
-                         else do placedBoat <- pickCoords (boatTypes !! (choice-1)) boats
-                                 userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
-        where yell = putStrLn "Not an option." >> userPlaceBoatsRec boatTypes boats
+        let prompt = do
+                       putStr (concat ["Which boat would you like to place? (",
+                                (intercalate ", " (numberBoats boatTypes)),
+                                ") "])
+                       n <- getLine
+                       case (readMaybe n) :: Maybe Int of
+                         Nothing -> yell
+                         Just choice -> if ((choice < 0) || (choice > length boatTypes)) then yell
+                                        else do placedBoat <- pickCoords (boatTypes !! (choice-1)) boats
+                                                userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
+            yell = putStrLn "Please type a number." >> prompt
+          in prompt
       numberBoats boatTypes = map (\(n,b) -> concat [show n, ". ", show b]) (zip [1..] boatTypes)
       placeAllBoats :: [((Int,Int) -> Orientation -> Boat)] -> IO [Boat]
       placeAllBoats boatsToPlace = placeAllBoatsRec boatsToPlace []
