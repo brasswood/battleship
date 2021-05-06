@@ -7,6 +7,8 @@ Written for my final project for EECS 368: Programming Language Paradigms at KU.
 In the project directory, run `cabal run`.
 
 ## Gameplay
+**This game is best played in fullscreen.**
+
 The gameplay should be pretty intuitive. The board is made up of many
 characters, and here's what they mean:
 
