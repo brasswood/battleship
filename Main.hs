@@ -4,6 +4,7 @@ import Text.Read
 import System.Random
 import Data.Char
 import Data.List
+import System.Environment
 
 main :: IO ()
 main = game
@@ -18,11 +19,14 @@ addSquare (x,y) square (Board board) = Board ((take x board) ++ [row] ++ (drop (
 generateBoard :: [(Int,Int)] -> [(Int,Int)] -> [Boat] -> Board
 generateBoard [] [] [] = blankBoard
 generateBoard [] [] ((Boat [] _t):boats) = generateBoard [] [] boats
-generateBoard [] [] ((Boat (coord:coords) _t):boats) = addSquare coord BoatSquare (generateBoard [] [] ((Boat coords _t):boats))
+generateBoard [] [] ((Boat (coord:coords) t):boats) = addSquare coord square (generateBoard [] [] ((Boat coords t):boats))
+  where square = case t of 
+                   Haskellship -> HaskellSquare
+                   _           -> BoatSquare
 generateBoard [] (miss:misses) boats = addSquare miss MissSquare (generateBoard [] misses boats)
 generateBoard (hit:hits) misses boats = addSquare hit HitSquare (generateBoard hits misses boats)
 
-data Square = HitSquare | MissSquare | BlankSquare | BoatSquare deriving (Show, Eq)
+data Square = HitSquare | MissSquare | BlankSquare | BoatSquare | HaskellSquare deriving (Show, Eq)
 
 newtype Board = Board [[Square]]
 
@@ -36,6 +40,7 @@ instance Show Board where
           showRow (MissSquare:squares)  = "O " ++ showRow squares
           showRow (BlankSquare:squares) = "W " ++ showRow squares
           showRow (BoatSquare:squares)  = "B " ++ showRow squares
+          showRow (HaskellSquare:squares) = "\\ " ++ showRow squares
           showRow []              = ""
   show (Board [])         = ""
 
@@ -69,12 +74,13 @@ getCol coord
                   _      -> Nothing
 
 data Orientation = Hor | Vert deriving (Show, Eq)
-data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Carrier deriving (Eq)
+data BoatName = PatrolBoat | Submarine | Destroyer | Battleship | Haskellship | Carrier deriving (Eq)
 instance Show BoatName where
   show PatrolBoat = "Patrol Boat"
   show Submarine = "Submarine"
   show Destroyer = "Destroyer"
   show Battleship = "Battleship"
+  show Haskellship = "Haskellship"
   show Carrier = "Carrier"
 
 data Boat = Boat { coords :: [(Int,Int)], name :: BoatName } deriving (Eq)
@@ -97,6 +103,7 @@ patrolBoat origin orientation = boat origin 2 orientation PatrolBoat
 submarine origin orientation = boat origin 3 orientation Submarine
 destroyer origin orientation = boat origin 3 orientation Destroyer
 battleship origin orientation = boat origin 4 orientation Battleship
+haskellship origin orientation = boat origin 4 orientation Haskellship
 carrier origin orientation = boat origin 5 orientation Carrier
 
 validPlacement :: Boat -> [Boat] -> Bool
@@ -122,19 +129,6 @@ placeBoat boatConstructor boats = do
     in case validPlacement boat boats of
          True -> return (boat:boats)
          False -> placeBoat boatConstructor boats
-
-placeAllBoats :: IO [Boat]
-placeAllBoats = placeAllBoatsRec [patrolBoat, destroyer, submarine, battleship, carrier] []
-  where
-    placeAllBoatsRec :: [((Int,Int) -> Orientation -> Boat)] -> [Boat] -> IO [Boat]
-    placeAllBoatsRec [] boats = return boats
-    placeAllBoatsRec boatTypes boats = do
-      r <- randomRIO (0, (length boatTypes)-1)
-      let boatType = boatTypes !! r
-          remainingBoatTypes = (take r boatTypes) ++ (drop (r+1) boatTypes)
-        in do 
-             recBoats <- placeBoat boatType boats
-             placeAllBoatsRec remainingBoatTypes recBoats
 
 data PlayerType = Human | Computer deriving (Show, Eq)
 data Player = Player { hits :: [(Int,Int)],
@@ -170,14 +164,10 @@ attack (Player hits misses boats ptype) shot (Player _ _ opponentBoats _) =
 
 game :: IO ()
 game = do
-  putStrLn "Welcome to Battleship! Let's set up your board."
-  boats1 <- ask
-  boats2 <- placeAllBoats
-  -- putStrLn "Psst... Here's player 2's board"
+  hShip <- isHaskellShip
+    -- putStrLn "Psst... Here's player 2's board"
   -- putStrLn (showBoats boats2)
-  let player1 = Player [] [] boats1 Human
-      player2 = Player [] [] boats2 Computer
-      gameLoop :: Player ->  Player -> IO ()
+  let gameLoop :: Player ->  Player -> IO ()
       gameLoop player1@(Player p1hits p1misses p1boats Human) player2@(Player p2hits p2misses _p2boats _p2type)= do
         putStrLn ("Your opponent's board:")
         putStrLn (show (generateBoard p1hits p1misses []))
@@ -215,31 +205,51 @@ game = do
                                 gameLoop player2 newPlayer1
             Win boatName -> putStrLn ("I sunk your " ++ (show boatName) ++
                                         "! I win!")
-     in gameLoop player1 player2
-  where ask = do 
-                putStr "Do you want me to randomly place your boats for you? (y/N) "
-                a <- getLine
-                if (a == "y") || (a == "Y") then placeAllBoats
-                else if (a == "n") || (a == "N") || (a == "") then userPlaceBoats
-                else (putStr "Sorry, I didn't get that. ") >> ask
+      ask = do 
+              putStr "Do you want me to randomly place your boats for you? (y/N) "
+              a <- getLine
+              if (a == "y") || (a == "Y") then placeAllBoats
+              else if (a == "n") || (a == "N") || (a == "") then userPlaceBoats
+              else (putStr "Sorry, I didn't get that. ") >> ask
+      bship = if hShip then Haskellship else Battleship
+      userPlaceBoats :: IO [Boat]
+      userPlaceBoats = userPlaceBoatsRec [PatrolBoat, Submarine, Destroyer, bship, Carrier] []
+      userPlaceBoatsRec :: [BoatName] -> [Boat] -> IO [Boat]
+      userPlaceBoatsRec [] boats = return boats
+      userPlaceBoatsRec boatTypes boats = do
+        putStrLn ("Your Board:\n" ++ show (generateBoard [] [] boats))
+        putStr (concat ["Which boat would you like to place? (",
+         (intercalate ", " (numberBoats boatTypes)),
+         ") "])
+        n <- getLine
+        case (readMaybe n) :: Maybe Int of
+          Nothing -> yell
+          Just choice -> if ((choice < 0) || (choice > length boatTypes)) then yell
+                         else do placedBoat <- pickCoords (boatTypes !! (choice-1)) boats
+                                 userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
+        where yell = putStrLn "Not an option." >> userPlaceBoatsRec boatTypes boats
+      numberBoats boatTypes = map (\(n,b) -> concat [show n, ". ", show b]) (zip [1..] boatTypes)
+      bship_constructor = if hShip then haskellship else battleship
+      placeAllBoats :: IO [Boat]
+      placeAllBoats = placeAllBoatsRec [patrolBoat, destroyer, submarine, bship_constructor, carrier] []
+      placeAllBoatsRec :: [((Int,Int) -> Orientation -> Boat)] -> [Boat] -> IO [Boat]
+      placeAllBoatsRec [] boats = return boats
+      placeAllBoatsRec boatTypes boats = do
+        r <- randomRIO (0, (length boatTypes)-1)
+        let boatType = boatTypes !! r
+            remainingBoatTypes = (take r boatTypes) ++ (drop (r+1) boatTypes)
+          in do 
+               recBoats <- placeBoat boatType boats
+               placeAllBoatsRec remainingBoatTypes recBoats
+     in do
+          boats1 <- ask
+          boats2 <- placeAllBoats
+          let
+            player1 = Player [] [] boats1 Human
+            player2 = Player [] [] boats2 Computer
+            in gameLoop player1 player2
 
-userPlaceBoats :: IO [Boat]
-userPlaceBoats = userPlaceBoatsRec [PatrolBoat, Submarine, Destroyer, Battleship, Carrier] []
-  where userPlaceBoatsRec :: [BoatName] -> [Boat] -> IO [Boat]
-        userPlaceBoatsRec [] boats = return boats
-        userPlaceBoatsRec boatTypes boats = do
-          putStrLn ("Your Board:\n" ++ show (generateBoard [] [] boats))
-          putStr (concat ["Which boat would you like to place? (",
-           (intercalate ", " (numberBoats boatTypes)),
-           ") "])
-          n <- getLine
-          case (readMaybe n) :: Maybe Int of
-            Nothing -> yell
-            Just choice -> if ((choice < 0) || (choice > length boatTypes)) then yell
-                           else do placedBoat <- pickCoords (boatTypes !! (choice-1)) boats
-                                   userPlaceBoatsRec (concat [take (choice-1) boatTypes, drop (choice) boatTypes]) placedBoat
-          where yell = putStrLn "Not an option." >> userPlaceBoatsRec boatTypes boats
-                numberBoats boatTypes = map (\(n,b) -> concat [show n, ". ", show b]) (zip [1..] boatTypes)
+
 
 pickCoords :: BoatName -> [Boat] -> IO [Boat]
 pickCoords boatType boats = 
@@ -247,6 +257,7 @@ pickCoords boatType boats =
                                      Submarine -> submarine
                                      Destroyer -> destroyer
                                      Battleship -> battleship
+                                     Haskellship -> haskellship 
                                      Carrier -> carrier
       yellCoord = (putStrLn "That's not a properly formatted coordinate. Example: 'A10'") >> pickCoords boatType boats
       yellPlacement = (putStrLn "Sorry, you can't put that boat there.") >> pickCoords boatType boats
@@ -267,3 +278,11 @@ pickCoords boatType boats =
       case (asTuple s) of
         Nothing -> yellCoord
         Just origin -> pickOrientation origin
+
+isHaskellShip :: IO Bool
+isHaskellShip = do
+  progName <- getProgName
+  case progName of
+    "haskellship" -> return True
+    "./haskellship" -> return True
+    _             -> return False
