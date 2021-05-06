@@ -5,9 +5,12 @@ import System.Random
 import Data.Char
 import Data.List
 import System.Environment
+import System.IO
 
 main :: IO ()
-main = game
+main = do
+         (hSetBuffering stdout NoBuffering)
+         game
 
 blankBoard :: Board
 blankBoard = Board ((replicate 10 . replicate 10) BlankSquare)
